@@ -101,7 +101,7 @@ export function startDshService({
   entry = resolveDshEntry(),
   environment = process.env,
   platform = process.platform,
-  timeoutMs = 60_000,
+  timeoutMs = 180_000,
   windowsLauncher = resolveWindowsHiddenConsoleLauncher(),
   windowsNodeExecutable = resolveWindowsNodeExecutable(),
 } = {}) {
