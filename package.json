@@ -88,6 +88,7 @@
     "productName": "DeepSeek Harness",
     "artifactName": "DeepSeek-Harness-Desktop-${version}-${arch}.${ext}",
     "asar": false,
+    "npmRebuild": false,
     "publish": {
       "provider": "github",
       "owner": "agent-earth",
@@ -135,6 +136,7 @@
     },
     "win": {
       "icon": "assets/icon.ico",
+      "signAndEditExecutable": false,
       "artifactName": "DeepSeek-Harness-Desktop-${version}-windows-${arch}.${ext}",
       "target": [
         {
