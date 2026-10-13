@@ -22,6 +22,8 @@ const settingsGeneralClientPath = path.join(
   'client.js',
 )
 const dshManifestPath = path.join(root, 'node_modules', '@deepseek-ai', 'dsh', 'package.json')
+const nodeModulesRoot = path.join(root, 'node_modules')
+const dshmarketManifestPath = path.join(root, 'node_modules', 'dshmarket', 'package.json')
 const windowsNodePath = path.join(root, 'assets', 'dsh-node.exe')
 const nodeLicensePath = path.join(root, 'third-party-licenses', 'nodejs-LICENSE')
 const DSH_MARKET_VERSION = '1.40.0'
@@ -79,6 +81,30 @@ export function prepareDshManifest(target = dshManifestPath) {
   if (patched !== source) writeFileSync(target, patched)
 }
 
+/**
+ * dshmarket 声明的 `dsh.client.inject` 里带着 @deepseek-ai/dsh-client-runtime，
+ * 但该包在 0.1.7-rc.2 中已被上游删除（改名成 dsh-client-resources）。
+ * 市场面板因此解析不到依赖，React 渲染时静默抛错，设置页里显示为一片空白。
+ * 这里按「注入项在内核中是否真实存在」动态裁剪，不写死包名。
+ */
+export function prepareDshmarketInject(
+  target = dshmarketManifestPath,
+  modulesRoot = nodeModulesRoot,
+) {
+  const source = readFileSync(target, 'utf8')
+  const manifest = JSON.parse(source)
+  const inject = manifest?.dsh?.client?.inject
+  if (!Array.isArray(inject)) return
+
+  const present = inject.filter(name => existsSync(path.join(modulesRoot, name, 'package.json')))
+  if (present.length === inject.length) return
+
+  const dropped = inject.filter(name => !present.includes(name))
+  manifest.dsh.client.inject = present
+  writeFileSync(target, `${JSON.stringify(manifest, null, 2)}\n`)
+  process.stdout.write(`prepare-dependencies: dshmarket 注入项裁剪掉 ${dropped.join(', ')}（内核中不存在）\n`)
+}
+
 export function findNodeLicense(executablePath = process.execPath) {
   const executableDirectory = path.dirname(executablePath)
   const candidates = [
@@ -114,7 +140,8 @@ function isMainModule() {
 if (isMainModule()) {
   prepareSettingsMarketNavIcon()
   prepareDshManifest()
+  prepareDshmarketInject()
   prepareWindowsNode()
-  process.stdout.write('prepare-dependencies: 设置导航图标补丁 + dshmanifest + dsh-node.exe 完成\n')
+  process.stdout.write('prepare-dependencies: 设置导航图标补丁 + dshmarket 注入裁剪 + dshmanifest + dsh-node.exe 完成\n')
   process.stdout.write('prepare-dependencies: 已跳过 apiproxy 补丁（该包在 0.1.7-rc.2 中已被上游移除）\n')
 }
